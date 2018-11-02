@@ -7,7 +7,7 @@ import java.awt.Color;
 import javalib.worldimages.*;
 import java.util.Random;
 
-//Represents a  helo single square of the game area
+//Represents a single square of the game area
 class Cell {
   // In logical coordinates, with the origin at the top-left corner of the screen
   int x;
