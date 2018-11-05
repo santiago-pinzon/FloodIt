@@ -55,9 +55,9 @@ class FloodItWorld extends World {
   // All the cells of the game
   ArrayList<Cell> board = new ArrayList<Cell>(1);
   // Defines an int constant
-  static final int BOARD_SIZE = 5;
+  static final int BOARD_SIZE = 25;
   Random ran;
-  static final int colors = 1;
+  static final int colors = 2;
 
   FloodItWorld(Random ran) {
     this.ran = ran;
@@ -84,7 +84,7 @@ class FloodItWorld extends World {
       }
     }
     board.get(0).flooded = true;
-   
+
   }
 
   void linkBoard() {
@@ -155,23 +155,26 @@ class FloodItWorld extends World {
       }
     }
   }
-  
+
   public boolean win() {
-    Color check = board.get(0).color;
     boolean test = true;
-    for(Cell e : board) {
-      test = test && e.color.equals(check);
+    for (Cell e : board) {
+      test = test && e.flooded;
     }
     return test;
   }
-  
+
+  public void onTick() {
+    this.win();
+  }
+
   public WorldEnd worldEnds() {
-    if(win()) {
-      WorldScene world = this.getEmptyScene();
-      world.placeImageXY(new TextImage("YOU WIN", 40, FontStyle.BOLD_ITALIC, Color.black), 150, 150);
+    if (win()) {
+      WorldScene world = this.makeScene();
+      world.placeImageXY(new TextImage("YOU WIN", 50, FontStyle.BOLD_ITALIC, Color.orange), 250,
+          250);
       return new WorldEnd(true, world);
-    }
-    else {
+    } else {
       return new WorldEnd(false, this.makeScene());
     }
   }
@@ -179,14 +182,13 @@ class FloodItWorld extends World {
 
 class ExamplesFlood {
 
-  Random ran = new Random(1234);
-  FloodItWorld game = new FloodItWorld();
+  Random ran = new Random(1);
+  FloodItWorld game = new FloodItWorld(ran);
   Cell test = new Cell(5, 5, 3);
 
   void testGame(Tester t) {
     t.checkExpect(game.win(), true);
-    
 
-    game.bigBang(500, 500);
+    game.bigBang(500, 500, .1);
   }
 }
