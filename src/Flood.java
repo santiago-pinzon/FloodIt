@@ -62,24 +62,27 @@ class FloodItWorld extends World {
   FloodItWorld(Random ran) {
     this.ran = ran;
 
-    makeBoard();
+    makeBoard(BOARD_SIZE);
 
-    linkBoard();
+    linkBoard(BOARD_SIZE);
+    
     flood(board.get(0).color);
   }
 
   FloodItWorld() {
     this.ran = new Random();
 
-    makeBoard();
+    makeBoard(BOARD_SIZE);
 
-    linkBoard();
+    linkBoard(BOARD_SIZE);
+    
     flood(board.get(0).color);
   }
 
-  void makeBoard() {
-    for (int i = 0; i < BOARD_SIZE; i++) {
-      for (int j = 0; j < BOARD_SIZE; j++) {
+  void makeBoard(int size) {
+    this.board.clear();
+    for (int i = 0; i < size; i++) {
+      for (int j = 0; j < size; j++) {
         this.board.add(new Cell(i, j, this.ran.nextInt(colors)));
       }
     }
@@ -87,21 +90,21 @@ class FloodItWorld extends World {
 
   }
 
-  void linkBoard() {
-    for (int j = 0; j < BOARD_SIZE; j++) {
-      for (int i = 0; i < BOARD_SIZE; i++) {
+  void linkBoard(int size) {
+    for (int j = 0; j < size; j++) {
+      for (int i = 0; i < size; i++) {
         if (i != 0) {
-          this.board.get(i * BOARD_SIZE + j).link("top", this.board.get((i - 1) * BOARD_SIZE + j));
+          this.board.get(i * size + j).link("top", this.board.get((i - 1) * size + j));
         }
-        if (i != BOARD_SIZE - 1) {
-          this.board.get(i * BOARD_SIZE + j).link("bottom",
-              this.board.get((i + 1) * BOARD_SIZE + j));
+        if (i != size - 1) {
+          this.board.get(i * size + j).link("bottom",
+              this.board.get((i + 1) * size + j));
         }
         if (j != 0) {
-          this.board.get(i * BOARD_SIZE + j).link("left", this.board.get(i * BOARD_SIZE + j - 1));
+          this.board.get(i * size + j).link("left", this.board.get(i * size + j - 1));
         }
-        if (j != BOARD_SIZE - 1) {
-          this.board.get(i * BOARD_SIZE + j).link("right", this.board.get(i * BOARD_SIZE + j + 1));
+        if (j != size - 1) {
+          this.board.get(i * size + j).link("right", this.board.get(i * size + j + 1));
         }
       }
     }
@@ -119,9 +122,8 @@ class FloodItWorld extends World {
 
   public void onKeyEvent(String key) {
     if (key.equals("r")) {
-      this.board.clear();
-      this.makeBoard();
-      this.linkBoard();
+      this.makeBoard(BOARD_SIZE);
+      this.linkBoard(BOARD_SIZE);
       flood(board.get(0).color);
     }
     return;
@@ -181,14 +183,87 @@ class FloodItWorld extends World {
 }
 
 class ExamplesFlood {
+  
+  
+  //Examples for drawing
+  Cell test1 = new Cell(5, 5, 1);
+  Cell test2 = new Cell(5, 5, 2);
+  Cell test3 = new Cell(5, 5, 3);
+  Cell test4 = new Cell(5, 5, 4);
+  Cell test5 = new Cell(5, 5, 5);
+  Cell test6 = new Cell(5, 5, 6);
+  Cell test7 = new Cell(5, 5, 0);
+  
+  RectangleImage draw1 = new RectangleImage(20, 20, OutlineMode.SOLID, Color.cyan);
+  RectangleImage draw2 = new RectangleImage(20, 20, OutlineMode.SOLID, Color.red);
+  RectangleImage draw3 = new RectangleImage(20, 20, OutlineMode.SOLID, Color.green);
+  RectangleImage draw4 = new RectangleImage(20, 20, OutlineMode.SOLID, Color.yellow);
+  RectangleImage draw5 = new RectangleImage(20, 20, OutlineMode.SOLID, Color.magenta);
+  RectangleImage draw6 = new RectangleImage(20, 20, OutlineMode.SOLID, Color.orange);
+  RectangleImage draw7 = new RectangleImage(20, 20, OutlineMode.SOLID, Color.BLUE);
 
-  Random ran = new Random(1);
+  void testDraw(Tester t) {
+    t.checkExpect(this.test1.draw(), this.draw1);
+    t.checkExpect(this.test2.draw(), this.draw2);
+    t.checkExpect(this.test3.draw(), this.draw3);
+    t.checkExpect(this.test4.draw(), this.draw4);
+    t.checkExpect(this.test5.draw(), this.draw5);
+    t.checkExpect(this.test6.draw(), this.draw6);
+    t.checkExpect(this.test7.draw(), this.draw7);
+  }
+  
+  //Examples for linking
+  Cell link1 = new Cell(5, 5, 0);
+  Cell linkL = new Cell(5, 5, 0);
+  Cell linkR = new Cell(5, 5, 0);
+  Cell linkT = new Cell(5, 5, 0);
+  Cell linkB = new Cell(5, 5, 0);
+  
+  void testLink(Tester t) {
+    this.linkL.link("left", this.link1);
+    this.linkR.link("right", this.link1);
+    this.linkT.link("top", this.link1);
+    this.linkB.link("bottom", this.link1);
+    t.checkExpect(this.linkL.left, this.link1);
+    t.checkExpect(this.linkR.right, this.link1);
+    t.checkExpect(this.linkT.top, this.link1);
+    t.checkExpect(this.linkB.bottom, this.link1);
+  }
+  
+  //examples for makeBoard
+  Random ran = new Random(1234);
   FloodItWorld game = new FloodItWorld(ran);
-  Cell test = new Cell(5, 5, 3);
-
+  
+  Cell make1 = new Cell(0,0,1);
+  ArrayList<Cell> board1 = new ArrayList<Cell>();
+  
+  Cell make2 = new Cell(0,0,1);
+  Cell make3 = new Cell(0,1,1);
+  Cell make4 = new Cell(1,0,0);
+  Cell make5 = new Cell(1,1,0);
+  ArrayList<Cell> board2 = new ArrayList<Cell>();
+  
+  // Test done with colors set to 2
+  void testMakeBoard(Tester t) {
+    game.makeBoard(1);
+    this.make1.flooded = true;
+    this.board1.add(this.make1);
+    t.checkExpect(this.game.board, this.board1);
+    
+    game.makeBoard(2);
+    this.make2.flooded = true;
+    this.board2.add(this.make2);
+    this.board2.add(this.make3);
+    this.board2.add(this.make4);
+    this.board2.add(this.make5);
+    
+    t.checkExpect(this.game.board, this.board2);
+  }
+  
+  
   void testGame(Tester t) {
     t.checkExpect(game.win(), true);
 
-    game.bigBang(500, 500, .1);
+    //game.bigBang(500, 500, .1);
   }
 }
