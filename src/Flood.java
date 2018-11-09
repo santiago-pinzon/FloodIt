@@ -4,6 +4,8 @@ import java.util.Arrays;
 import tester.*;
 import javalib.impworld.*;
 import java.awt.Color;
+import java.math.BigInteger;
+
 import javalib.worldimages.*;
 import java.util.Random;
 
@@ -12,17 +14,22 @@ class Cell {
   // In logical coordinates, with the origin at the top-left corner of the screen
   int x;
   int y;
+  
+  // color and is the cell flooded?
   Color color;
   boolean flooded;
+  
   // the four adjacent cells to this one
   Cell left;
   Cell top;
   Cell right;
   Cell bottom;
+  
   static final int TILE_SIZE = 20;
   static ArrayList<Color> colorKey = new ArrayList<Color>(Arrays.asList(Color.blue, Color.cyan,
       Color.red, Color.green, Color.yellow, Color.magenta, Color.orange));
 
+  // constructor
   Cell(int x, int y, int color) {
     this.x = x;
     this.y = y;
@@ -30,11 +37,29 @@ class Cell {
     this.color = colorKey.get(color);
     this.flooded = false;
   }
+  
+  /*-
+   *Fields:
+   * ...this.x ... int
+   * ...this.y ... int
+   * ...this.color ... Color
+   * ...this.flooded ... boolena
+   * ...this.left ... Cell
+   * ...this.right ... Cell
+   * ...this.top ... Cell
+   * ...this.bottom ... Cell
+   *Methods:
+   * ...this.draw() ... WorldImage
+   * ...this.link(String, Cell) ... void
+   * 
+   */
 
+  // draws the image of the cell
   WorldImage draw() {
     return new RectangleImage(TILE_SIZE, TILE_SIZE, OutlineMode.SOLID, this.color);
   }
 
+  // links the adjacent cells
   void link(String loc, Cell other) {
     if (loc.equals("top")) {
       this.top = other;
@@ -51,6 +76,7 @@ class Cell {
   }
 }
 
+// represents the world
 class FloodItWorld extends World {
   // All the cells of the game
   ArrayList<Cell> board = new ArrayList<Cell>(1);
@@ -58,7 +84,11 @@ class FloodItWorld extends World {
   static final int BOARD_SIZE = 25;
   Random ran;
   static final int colors = 2;
+  
+  WorldScene previous = this.getEmptyScene();
 
+  int index = 0;
+  // constructor
   FloodItWorld(Random ran) {
     this.ran = ran;
 
@@ -78,7 +108,29 @@ class FloodItWorld extends World {
     
     flood(board.get(0).color);
   }
+  
+  /*-
+   *Fields:
+   * ...this.board... ArrayList<T>
+   * ...this.ran ... Random
+   *Methods:
+   * ...this.makeBoard(int) ... void
+   * ...this.linkBoard(int) ... void
+   * ...this.makeScene() ... WorldScene
+   * ...this.onKeyEvent(String) ... void
+   * ...this.onMouseClicked(String) ... void
+   * ...this.flood(Color) ... void
+   * ...this.win() ... boolean
+   * ...this.onTick() ... void
+   * ...this.worldEnds() ... WorldEnd
+   *Methods for Fields:
+   * ...this.board.add(Cell) ... ArrayList<T>
+   * ...this.ran.nextInt(int) ... int
+   * ...this.board.get(int).flooded ... boolean
+   * 
+   */
 
+  // makes the board of the game with cells
   void makeBoard(int size) {
     this.board.clear();
     for (int i = 0; i < size; i++) {
@@ -90,6 +142,7 @@ class FloodItWorld extends World {
 
   }
 
+  // links the cells of the board
   void linkBoard(int size) {
     for (int j = 0; j < size; j++) {
       for (int i = 0; i < size; i++) {
@@ -109,19 +162,19 @@ class FloodItWorld extends World {
       }
     }
   }
-
-
+  
+  // makes the scene and draws it
   public WorldScene makeScene() {
-    WorldScene mt = this.getEmptyScene();
-    for (Cell e : board) {
-      mt.placeImageXY(e.draw(), e.TILE_SIZE * e.x + e.TILE_SIZE / 2,
+    Cell e = board.get(index);
+      previous.placeImageXY(e.draw(), e.TILE_SIZE * e.x + e.TILE_SIZE / 2,
           e.TILE_SIZE * e.y + e.TILE_SIZE / 2);
-    }
-    return mt;
+    return previous;
   }
 
+  // registers key events and changes the world
   public void onKeyEvent(String key) {
     if (key.equals("r")) {
+      index = 0;
       this.makeBoard(BOARD_SIZE);
       this.linkBoard(BOARD_SIZE);
       flood(board.get(0).color);
@@ -129,7 +182,9 @@ class FloodItWorld extends World {
     return;
   }
 
+  // registers location of mouse event and changes world
   public void onMouseClicked(Posn pos) {
+    index = 0;
     for (Cell e : board) {
       if (pos.x >= e.x * 20 && pos.x < e.x * 20 + 20 && pos.y >= e.y * 20
           && pos.y < e.y * 20 + 20) {
@@ -138,27 +193,28 @@ class FloodItWorld extends World {
     }
   }
 
+  // floods the adjacent cells if not flooded and same color
   public void flood(Color color) {
-    for (Cell e : board) {
-      if (e.flooded) {
-        e.color = color;
-        if (e.top != null && e.top.color.equals(color)) {
-          e.top.flooded = true;
+    for (Cell c : board) {
+      if (c.flooded) {
+        c.color = color;
+        if (c.top != null && c.top.color.equals(color)) {
+          c.top.flooded = true;
         }
-        if (e.left != null && e.left.color.equals(color)) {
-          e.left.flooded = true;
+        if (c.left != null && c.left.color.equals(color)) {
+          c.left.flooded = true;
         }
-        if (e.right != null && e.right.color.equals(color)) {
-          e.right.flooded = true;
+        if (c.right != null && c.right.color.equals(color)) {
+          c.right.flooded = true;
         }
-        if (e.bottom != null && e.bottom.color.equals(color)) {
-          e.bottom.flooded = true;
+        if (c.bottom != null && c.bottom.color.equals(color)) {
+          c.bottom.flooded = true;
         }
       }
     }
-    
   }
 
+  // did the user win?
   public boolean win() {
     boolean test = true;
     for (Cell e : board) {
@@ -167,10 +223,13 @@ class FloodItWorld extends World {
     return test;
   }
 
+  // ticks the world to check for win condition
   public void onTick() {
     this.win();
+    index = (index+1) % (BOARD_SIZE*BOARD_SIZE);
   }
 
+  // ends the game when conditions are met
   public WorldEnd worldEnds() {
     if (win()) {
       WorldScene world = this.makeScene();
@@ -183,6 +242,7 @@ class FloodItWorld extends World {
   }
 }
 
+// represents the examples class
 class ExamplesFlood {
   
   
@@ -235,7 +295,6 @@ class ExamplesFlood {
   Random ran = new Random(1234);
   FloodItWorld game = new FloodItWorld(ran);
   
-  /*
   Cell make1 = new Cell(0,0,1);
   ArrayList<Cell> board1 = new ArrayList<Cell>();
   
@@ -244,6 +303,7 @@ class ExamplesFlood {
   Cell make4 = new Cell(1,0,0);
   Cell make5 = new Cell(1,1,0);
   ArrayList<Cell> board2 = new ArrayList<Cell>();
+ 
   
   // Test done with colors set to 2
   void testMakeBoard(Tester t) {
@@ -261,10 +321,23 @@ class ExamplesFlood {
     
     t.checkExpect(this.game.board, this.board2);
   }
-  */
   
+
+  // tests MakeScene
+  void testMakeScene(Tester t) {
+    FloodItWorld game3 = new FloodItWorld(new Random(0)); 
+    game3.makeBoard(1);
+    WorldScene mtscene = new FloodItWorld().getEmptyScene();
+    t.checkExpect(game3.makeScene(), mtscene);
+    
+    FloodItWorld game2 = new FloodItWorld(new Random(4)); 
+    game2.makeBoard(2);
+    t.checkExpect(game2.makeScene(), game.makeScene());
+  }
+
   void testGame(Tester t) {
-    t.checkExpect(game.win(), true);
-    game.bigBang(500, 500, .1);
+    //t.checkExpect(game.win(), true);
+    FloodItWorld playGame = new FloodItWorld(ran);
+    playGame.bigBang(500, 500, .000000000000000000000000000000000000000000000000000000001);
   }
 }
