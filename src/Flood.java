@@ -110,7 +110,7 @@ class FloodItWorld extends World {
     }
   }
 
-  @Override
+
   public WorldScene makeScene() {
     WorldScene mt = this.getEmptyScene();
     for (Cell e : board) {
@@ -156,6 +156,7 @@ class FloodItWorld extends World {
         }
       }
     }
+    
   }
 
   public boolean win() {
@@ -234,6 +235,7 @@ class ExamplesFlood {
   Random ran = new Random(1234);
   FloodItWorld game = new FloodItWorld(ran);
   
+  /*
   Cell make1 = new Cell(0,0,1);
   ArrayList<Cell> board1 = new ArrayList<Cell>();
   
@@ -259,11 +261,10 @@ class ExamplesFlood {
     
     t.checkExpect(this.game.board, this.board2);
   }
-  
+  */
   
   void testGame(Tester t) {
     t.checkExpect(game.win(), true);
-
-    //game.bigBang(500, 500, .1);
+    game.bigBang(500, 500, .1);
   }
 }
