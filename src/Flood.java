@@ -4,7 +4,6 @@ import java.util.Arrays;
 import tester.*;
 import javalib.impworld.*;
 import java.awt.Color;
-import java.math.BigInteger;
 
 import javalib.worldimages.*;
 import java.util.Random;
@@ -74,16 +73,19 @@ class Cell {
       this.bottom = other;
     }
   }
+
 }
 
 // represents the world
 class FloodItWorld extends World {
   // All the cells of the game
   ArrayList<Cell> board = new ArrayList<Cell>(1);
+
   // Defines an int constant
-  static final int BOARD_SIZE = 25;
+  int boardSize = 25;
   Random ran;
-  static final int colors = 2;
+  int colors = 3;
+  int maxMoves = 10;
 
   WorldScene previous = this.getEmptyScene();
 
@@ -95,35 +97,47 @@ class FloodItWorld extends World {
   boolean start = true;
   boolean running = true;
 
+  // set the size of the window
+  int height;
+  int width;
+
   // constructor
-  FloodItWorld(Random ran) {
+  FloodItWorld(Random ran, int height, int width, int colors, int size) {
     this.ran = ran;
+    
+    boardSize = size;
+    this.colors = colors;
 
-    makeBoard(BOARD_SIZE);
+    makeBoard(boardSize);
 
-    linkBoard(BOARD_SIZE);
+    linkBoard(boardSize);
 
     flood(board.get(0).color);
 
-    this.toBeDrawn = (ArrayList<Cell>) this.board.clone();
+    this.toBeDrawn.clear();
 
     this.flooding = false;
     this.start = true;
+
+    // literally taken from source code
+    maxMoves = (int) (Math.floor((25 * (2 * boardSize) * colors)) / (28 * 6));
   }
 
-  FloodItWorld() {
+  FloodItWorld(int height, int width, int colors, int size) {
     this.ran = new Random();
+    
+    boardSize = size;
+    this.colors = colors;
 
-    makeBoard(BOARD_SIZE);
+    makeBoard(boardSize);
 
-    linkBoard(BOARD_SIZE);
+    linkBoard(boardSize);
 
     flood(board.get(0).color);
 
-    this.toBeDrawn = (ArrayList<Cell>) this.board.clone();
-
     this.flooding = false;
     this.start = true;
+    maxMoves = (int) (Math.floor((25 * (2 * boardSize) * colors)) / (28 * 6));
   }
 
   /*-
@@ -133,6 +147,11 @@ class FloodItWorld extends World {
    * ...this.toBeDrawn ... ArrayList<T>
    * ...this.flooding ... boolean
    * ...this.start ... boolean
+   * ...this.running ... boolean
+   * ...this.colors ... int
+   * ...this.BOARD_SIZE ... int
+   * ...this.numMoves ... int
+   * ...this.maxMoves ... int
    *Methods:
    * ...this.makeBoard(int) ... void
    * ...this.linkBoard(int) ... void
@@ -141,8 +160,6 @@ class FloodItWorld extends World {
    * ...this.onMouseClicked(String) ... void
    * ...this.flood(Color) ... void
    * ...this.win() ... boolean
-   * ...this.onTick() ... void
-   * ...this.worldEnds() ... WorldEnd
    *Methods for Fields:
    * ...this.board.add(Cell) ... ArrayList<T>
    * ...this.ran.nextInt(int) ... int
@@ -184,31 +201,58 @@ class FloodItWorld extends World {
 
   // makes the scene and draws it
   public WorldScene makeScene() {
-    if (this.toBeDrawn.size() == 0) {
-      this.flooding = false;
+    WorldScene mt = this.getEmpty();
+
+    ArrayList<Cell> temp = (ArrayList<Cell>) this.board.clone();
+    temp.removeAll(this.toBeDrawn);
+
+    for (Cell e : temp) {
+      mt.placeImageXY(e.draw(), e.TILE_SIZE * e.x + e.TILE_SIZE / 2,
+          e.TILE_SIZE * e.y + e.TILE_SIZE / 2);
     }
+
     if (this.start) {
       for (Cell e : board) {
-        previous.placeImageXY(e.draw(), e.TILE_SIZE * e.x + e.TILE_SIZE / 2,
+        mt.placeImageXY(e.draw(), e.TILE_SIZE * e.x + e.TILE_SIZE / 2,
             e.TILE_SIZE * e.y + e.TILE_SIZE / 2);
       }
       this.start = false;
-
-      return previous;
-
     }
+
+    if (this.toBeDrawn.size() == 0) {
+      this.flooding = false;
+    }
+
     if (flooding) {
+      this.previous = mt;
       Cell e = this.toBeDrawn.get(0);
       previous.placeImageXY(e.draw(), e.TILE_SIZE * e.x + e.TILE_SIZE / 2,
           e.TILE_SIZE * e.y + e.TILE_SIZE / 2);
       this.toBeDrawn.remove(0);
+      return previous;
     }
+
     if (this.win()) {
       this.running = false;
-      previous.placeImageXY(new TextImage("YOU WIN IN " + this.numMoves + " MOVES", 40,
+      mt.placeImageXY(new TextImage("YOU WIN IN " + this.numMoves + " MOVES", 40,
           FontStyle.BOLD_ITALIC, Color.orange), 250, 250);
     }
-    return previous;
+
+    if (this.numMoves > maxMoves) {
+      this.running = false;
+      mt.placeImageXY(new TextImage("Ran Out Of Moves", 40, FontStyle.BOLD_ITALIC, Color.orange),
+          250, 250);
+    }
+
+    return mt;
+  }
+
+  WorldScene getEmpty() {
+    WorldScene mt = this.getEmptyScene();
+    mt.placeImageXY(new TextImage("MOVES: " + (this.maxMoves - this.numMoves) + "/" + this.maxMoves,
+        40, FontStyle.BOLD, Color.black), 250, 550);
+    return mt;
+
   }
 
   // registers key events and changes the world
@@ -217,22 +261,25 @@ class FloodItWorld extends World {
       this.numMoves = 0;
       this.start = true;
       this.running = true;
-      this.makeBoard(BOARD_SIZE);
-      this.linkBoard(BOARD_SIZE);
+      this.makeBoard(boardSize);
+      this.linkBoard(boardSize);
+      this.previous = this.getEmptyScene();
       flood(board.get(0).color);
-      this.toBeDrawn = (ArrayList<Cell>) this.board.clone();
+      this.toBeDrawn.clear();
     }
     return;
   }
 
   // registers location of mouse event and changes world
   public void onMouseClicked(Posn pos) {
-    this.flooding = true;
-    this.numMoves++;
     if (this.running) {
       for (Cell e : board) {
         if (pos.x >= e.x * 20 && pos.x < e.x * 20 + 20 && pos.y >= e.y * 20
             && pos.y < e.y * 20 + 20) {
+          if (!(e.color.equals(board.get(0).color))) {
+            this.numMoves++;
+          }
+          this.flooding = true;
           flood(e.color);
         }
       }
@@ -268,11 +315,6 @@ class FloodItWorld extends World {
       test = test && e.flooded;
     }
     return test;
-  }
-
-  // ticks the world to check for win condition
-  public void onTick() {
-    this.win();
   }
 
 }
@@ -327,17 +369,20 @@ class ExamplesFlood {
 
   // examples for makeBoard
   Random ran = new Random(1234);
-  FloodItWorld game = new FloodItWorld(ran);
+  FloodItWorld game = new FloodItWorld(ran, 700, 500, 2, 1);
 
-  Cell make1 = new Cell(0, 0, 1);
+  Cell make1 = new Cell(0, 0, 0);
   ArrayList<Cell> board1 = new ArrayList<Cell>();
 
-  Cell make2 = new Cell(0, 0, 1);
+  
+  FloodItWorld game2 = new FloodItWorld(ran, 700, 500, 2, 2);
+  Cell make2 = new Cell(0, 0, 0);
   Cell make3 = new Cell(0, 1, 1);
   Cell make4 = new Cell(1, 0, 0);
   Cell make5 = new Cell(1, 1, 0);
   ArrayList<Cell> board2 = new ArrayList<Cell>();
 
+  // fails every other time due to random
   // Test done with colors set to 2
   void testMakeBoard(Tester t) {
     game.makeBoard(1);
@@ -345,31 +390,131 @@ class ExamplesFlood {
     this.board1.add(this.make1);
     t.checkExpect(this.game.board, this.board1);
 
-    game.makeBoard(2);
+    game2.makeBoard(2);
     this.make2.flooded = true;
     this.board2.add(this.make2);
     this.board2.add(this.make3);
     this.board2.add(this.make4);
     this.board2.add(this.make5);
 
-    t.checkExpect(this.game.board, this.board2);
+    t.checkExpect(this.game2.board, this.board2);
   }
 
   // tests MakeScene
   void testMakeScene(Tester t) {
-    FloodItWorld game3 = new FloodItWorld(new Random(0));
+    FloodItWorld game3 = new FloodItWorld(new Random(0), 600, 500, 1, 1);
     game3.makeBoard(1);
-    WorldScene mtscene = new FloodItWorld().getEmptyScene();
+    WorldScene mtscene = new FloodItWorld(600, 500, 2, 2).getEmptyScene();
     t.checkExpect(game3.makeScene(), mtscene);
 
-    FloodItWorld game2 = new FloodItWorld(new Random(4));
+    FloodItWorld game2 = new FloodItWorld(new Random(4), 600, 500, 2, 2);
     game2.makeBoard(2);
     t.checkExpect(game2.makeScene(), game.makeScene());
   }
+  
+  // tests the method onMouseClick
+  void testOnMouseClick(Tester t) {
+    FloodItWorld game3 = new FloodItWorld(new Random(0), 500, 600, 2, 2);
+    game3.makeBoard(1);
+    t.checkExpect(game3.numMoves, 0);
+    t.checkExpect(game3.flooding, false);
+    t.checkExpect(game3.start, true);
+    game3.onMouseClicked(new Posn(5,5));
+    t.checkExpect(game3.numMoves, 0);
+    t.checkExpect(game3.flooding, true);
+    t.checkExpect(game3.start, true);
+    game3.onMouseClicked(new Posn(50,50));
+    t.checkExpect(game3.numMoves, 0);
+    t.checkExpect(game3.flooding, true);
+    t.checkExpect(game3.start, true);
+    
+    FloodItWorld game4 = new FloodItWorld(new Random(4), 600, 500, 2, 2);
+    
+    game4.makeBoard(2);
+    t.checkExpect(game4.numMoves, 0);
+    t.checkExpect(game4.flooding, false);
+    game4.onMouseClicked(new Posn(0,0));
+    t.checkExpect(game4.numMoves, 0);
+    t.checkExpect(game4.flooding, true);
+    game4.onMouseClicked(new Posn(30,30));
+    t.checkExpect(game4.numMoves, 1);
+    t.checkExpect(game4.flooding, true);
+    //t.checkExpect(game.makeScene(), null);
+  }
+  
+  // tests method onKeyEvent
+  void testOnKeyEvent(Tester t) {
+    FloodItWorld game4 = new FloodItWorld(new Random(1), 500, 600, 2, 2);
+    game4.makeBoard(1);
+    game4.numMoves = 5;
+    game4.flooding = false;
+    game4.start = false;
+    game4.running = false;
+    
+    t.checkExpect(game4.numMoves, 5);
+    t.checkExpect(game4.flooding, false);
+    t.checkExpect(game4.start, false);
+    t.checkExpect(game4.running, false);
+    game4.onKeyEvent("r");
+    t.checkExpect(game4.numMoves, 0);
+    t.checkExpect(game4.flooding, false);
+    t.checkExpect(game4.start, true);
+    t.checkExpect(game4.running, true);
+    
+  }
+  
+  // tests the flood method
+  void testFlood(Tester t) {
+    FloodItWorld game5 = new FloodItWorld(new Random(2), 500, 600, 2 ,2);
+    game5.makeBoard(2);
+    t.checkExpect(game5.board.get(0).flooded, true);
+    t.checkExpect(game5.board.get(0).color, Color.blue);
+    t.checkExpect(game5.board.get(1).flooded, false);
+    t.checkExpect(game5.board.get(1).color, Color.cyan);
+    game5.flood(Color.red);
+    t.checkExpect(game5.board.get(0).flooded, true);
+    t.checkExpect(game5.board.get(1).flooded, false);
+    game5.flood(Color.blue);    
+    t.checkExpect(game5.board.get(0).flooded, true);
+    t.checkExpect(game5.board.get(0).color, Color.blue);
+    t.checkExpect(game5.board.get(1).flooded, false);
+    t.checkExpect(game5.board.get(1).color, Color.cyan);
+    game5.flood(Color.green);    
+    t.checkExpect(game5.board.get(0).flooded, true);
+    t.checkExpect(game5.board.get(0).color, Color.green);
+    t.checkExpect(game5.board.get(1).color, Color.cyan);
+    t.checkExpect(game5.board.get(1).flooded, false);
+    
+  }
+  
+  // tests the method win
+  void testWin(Tester t) {
+    FloodItWorld game6 = new FloodItWorld(new Random(2), 500, 600, 2, 2);
+    game6.makeBoard(2);
+    t.checkExpect(game6.win(), false);
+    
+
+    game6.board.get(0).flooded = true;
+    game6.board.get(1).flooded = true;
+    game6.board.get(2).flooded = true;
+    game6.board.get(3).flooded = true;
+    game6.board.get(0).color = Color.BLACK;
+    game6.board.get(1).color = Color.BLACK;
+    game6.board.get(2).color = Color.BLACK;
+    game6.board.get(3).color = Color.BLACK;
+    t.checkExpect(game6.win(), true);
+    
+    game6.makeBoard(1);
+    game6.board.get(0).flooded = true;
+    t.checkExpect(game6.win(), true);
+    
+  }
+
+
 
   void testGame(Tester t) {
     // t.checkExpect(game.win(), true);
-    FloodItWorld playGame = new FloodItWorld(ran);
-    playGame.bigBang(500, 500, 0.00000001);
+    FloodItWorld playGame = new FloodItWorld(ran, 600, 500, 4, 25);
+    //playGame.bigBang(500, 600, .01);
   }
 }
